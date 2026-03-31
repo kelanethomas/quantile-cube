@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "quantile-cube"
+version = "0.1.0"
+description = "Triangular heatmap visualization for quantile distributions across a 2D parameter space."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "Kendall Thomas", email = "kelanethomas@gmail.com" }
+]
+keywords = ["visualization", "quantile", "heatmap", "matplotlib", "statistics"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering :: Visualization",
+]
+dependencies = [
+  "numpy>=1.21",
+  "matplotlib>=3.5",
+  "pandas>=1.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/kelanethomas/quantile-cube"
+"Bug Tracker" = "https://github.com/kelanethomas/quantile-cube/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/quantile_cube"]
