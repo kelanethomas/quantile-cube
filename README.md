@@ -68,7 +68,7 @@ plot_cube(
 | `show_values` | bool | `False` | Print numeric value at center of each triangle |
 | `value_fmt` | str | `".4f"` | Format string for numeric labels when `show_values=True` |
 | `grey_nonsignificant` | bool | `False` | Render NaN values in grey |
-| `save` | bool | `True` | Save figure to file |
+| `save` | bool | `False` | Save figure to file |
 | `save_path` | str | `"<title>.png"` | Custom save path |
 | `show` | bool | `True` | Call `plt.show()` |
 | `figsize` | tuple | `(7, 7)` | Figure size in inches |

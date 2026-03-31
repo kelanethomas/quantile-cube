@@ -36,7 +36,7 @@ def plot_cube(
     value_fmt: str = ".4f",
     # --- Display options ---
     grey_nonsignificant: bool = False,
-    save: bool = True,
+    save: bool = False,
     save_path: str | None = None,
     show: bool = True,
     figsize: tuple = (7, 7),
@@ -112,7 +112,7 @@ def plot_cube(
         If True, NaN values are rendered in grey with a legend entry labeled
         "Non-significant Coefficient". Default is False.
     save : bool, optional
-        If True, save the figure to a file. Default is True.
+        If True, save the figure to a file. Default is False.
     save_path : str, optional
         File path for saving. Defaults to ``"<title>.png"`` in the
         current directory.
