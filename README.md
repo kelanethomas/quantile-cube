@@ -174,7 +174,6 @@ Please open an [issue](https://github.com/kelanethomas/quantile-cube/issues) fir
 ---
 
 ## Citation
-## Citation
 
 This package accompanies the following paper:
 
