@@ -5,7 +5,7 @@ A Python package for visualizing the distribution of 3D movement data — veloci
 Movement observations are binned into quantiles along three dimensions: velocity (x-axis), acceleration (y-axis), and angle of movement (the four triangles within each cell). Each triangle's color represents the density of observations — the proportion of total time spent in that specific combination of velocity, acceleration, and angle quantile. This makes it possible to see at a glance where movement is concentrated across all three dimensions simultaneously.
 
 <p align="center">
-  <img src="docs/example.png" width="500" alt="Example quantile cube visualization"/>
+  <img src="https://raw.githubusercontent.com/kelanethomas/quantile-cube/main/docs/example.png" width="500" alt="Example quantile cube visualization"/>
 </p>
 
 ---

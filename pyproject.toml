@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "quantile-cube"
-version = "0.1.0"
+version = "0.1.1"
 description = "Triangular heatmap visualization for quantile distributions across a 2D parameter space."
 readme = "README.md"
 requires-python = ">=3.9"
