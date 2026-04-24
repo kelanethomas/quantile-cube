@@ -13,6 +13,19 @@ import matplotlib.patches as mpatches
 from .triangulation import triangulation_for_triheatmap
 from .labels import add_value_labels, add_quantile_labels
 
+def reorder_in_chunks(lst, chunk_size=5):
+    # List to hold the new order
+    new_order = []
+    
+    # Iterate over the list in reverse chunks of size `chunk_size`
+    for i in range(len(lst), 0, -chunk_size):
+        # Get the current chunk of size `chunk_size`
+        chunk = lst[max(0, i - chunk_size):i]
+        
+        # Prepend the chunk to the new order
+        new_order.extend(chunk)
+    
+    return new_order 
 
 def plot_cube(
     # --- Data input: provide EITHER `values` OR `cube_data` ---
@@ -98,7 +111,7 @@ def plot_cube(
         Y-axis label. Default is "Acceleration".
     quantile_labels : list of str, optional
         Four labels for the triangles [N, E, S, W]. Defaults to
-        ["Q1", "Q2", "Q3", "Q4"].
+        ["Angle Q1", "Angle Q2", "Angle Q3", "Angle Q4"]
     show_quantile_labels : bool, optional
         If True, display a single-cell summary view with quantile labels
         instead of the full grid. Default is False.
@@ -132,94 +145,105 @@ def plot_cube(
         If neither ``values`` nor ``cube_data`` is provided, or if ``values``
         does not contain exactly 4 arrays.
     """
+    # Colormap Handling 
     if cmap is None:
         cmap = plt.get_cmap("Reds")
     elif isinstance(cmap, str):
         cmap = plt.get_cmap(cmap)
 
+    # Default Labels for Angle Quantiles 
     if quantile_labels is None:
-        quantile_labels = ["Q1", "Q2", "Q3", "Q4"]
+        quantile_labels = ["Angle Q1", "Angle Q2", "Angle Q3", "Angle Q4"]
     if len(quantile_labels) != 4:
-        raise ValueError("`quantile_labels` must contain exactly 4 strings.")
+        raise ValueError("quantile_labels must contain exactly 4 strings.")
 
-    # ------------------------------------------------------------------ #
     # Resolve data input
-    # ------------------------------------------------------------------ #
     if values is not None:
         if len(values) != 4:
-            raise ValueError("`values` must be a list of exactly 4 arrays (one per quantile).")
+            raise ValueError("values must be a list of exactly 4 arrays (one per quantile).")
         q1, q2, q3, q4 = [np.asarray(v, dtype=float) for v in values]
 
     elif cube_data is not None:
-        # Columns are named: Q{v}_vel_Q{a}_acc_Q{angle}_angle
-        # e.g. Q1_vel_Q1_acc_Q1_angle
-        # We build 4 flat arrays (one per angle quantile), ordered row by row:
-        # for acc Q1..QN, for vel Q1..QM  → matches the grid left-to-right, top-to-bottom
-        def _extract_angle_q(angle_q: int) -> np.ndarray:
-            vals = []
-            for a in range(1, N + 1):
-                for v in range(1, M + 1):
-                    col = f"Q{v}_vel_Q{a}_acc_Q{angle_q}_angle"
-                    if col not in cube_data.columns:
-                        raise ValueError(
-                            f"Expected column '{col}' not found in DataFrame. "
-                            f"Check that M={M} and N={N} match your data."
-                        )
-                    vals.append(cube_data[col].iloc[0])
-            return np.asarray(vals, dtype=float)
-
-        q1 = _extract_angle_q(1)
-        q2 = _extract_angle_q(2)
-        q3 = _extract_angle_q(3)
-        q4 = _extract_angle_q(4)
+        q1 = np.asarray(reorder_in_chunks(cube_data.filter(like="Q1_angle").iloc[0].values, M),
+                        dtype=float)
+        q2 = np.asarray(reorder_in_chunks(cube_data.filter(like="Q2_angle").iloc[0].values, M),
+                        dtype=float)
+        q3 = np.asarray(reorder_in_chunks(cube_data.filter(like="Q3_angle").iloc[0].values, M),
+                        dtype=float)
+        q4 = np.asarray(reorder_in_chunks(cube_data.filter(like="Q4_angle").iloc[0].values, M),
+                        dtype=float)
 
     else:
-        raise ValueError("Provide either `values` (list of 4 arrays) or `cube_data` (DataFrame).")
+        raise ValueError(
+            "Provide either values=[q1,q2,q3,q4] "
+            "or cube_data=DataFrame."
+        )
 
-    # ------------------------------------------------------------------ #
-    # Summary / label view vs full grid view
-    # ------------------------------------------------------------------ #
+    # Summary Mode: Show one cell with four labeled triangles
     if show_quantile_labels:
-        plot_values = [q1[-M], q2[-M], q3[-M], q4[-M]]
-        plot_m, plot_n = 1, 1
+        plot_values = [
+            q1[-M],
+            q2[-M],
+            q3[-M],
+            q4[-M],
+        ]
+        plot_M, plot_N = 1, 1
+
     else:
+        # Full grid mode
         plot_values = [q1, q2, q3, q4]
-        plot_m, plot_n = M, N
+        plot_M, plot_N = M, N
 
-    # ------------------------------------------------------------------ #
-    # Normalization
-    # ------------------------------------------------------------------ #
-    all_vals = np.concatenate([np.ravel(v) for v in plot_values])
-    vmin = minimum if minimum is not None else 0.0
-    raw_max = np.nanmax(all_vals)
-    vmax = maximum if maximum is not None else np.ceil(raw_max * 100) / 100
-    norm = plt.Normalize(vmin, vmax)
+    # Color Normalization
+    if minimum is None:
+        minimum = 0.0
 
-    # ------------------------------------------------------------------ #
-    # Build triangulation and plot
-    # ------------------------------------------------------------------ #
-    triangul = triangulation_for_triheatmap(plot_m, plot_n)
+    if maximum is None:
+
+        # Use data max rounded upward to nearest hundredth
+        all_vals = np.concatenate(
+            [np.ravel(v) for v in plot_values]
+        )
+
+        raw_max = np.nanmax(all_vals)
+        maximum = np.ceil(raw_max * 100) / 100
+    
+    norm = plt.Normalize(minimum, maximum)
+
+    # Build triangulations for N/E/S/W triangles in each square
+    triangul = triangulation_for_triheatmap( plot_M, plot_N)
 
     fig, ax = plt.subplots(figsize=figsize)
 
     if grey_nonsignificant:
         import copy
         grey_cmap = copy.copy(cmap)
+
+        # NaN values appear gray
         grey_cmap.set_bad(color="gray")
+
+        # Mask NaN values
         masked_values = [np.ma.masked_invalid(np.ravel(v)) for v in plot_values]
+
+        # Draw each quantile layer
         imgs = [
             ax.tripcolor(t, mv, cmap=grey_cmap, norm=norm, ec="white")
             for t, mv in zip(triangul, masked_values)
         ]
+
+        # Add legend for gray cells
         nan_patch = mpatches.Patch(color="gray", label="Non-significant Coefficient")
+
         ax.legend(handles=[nan_patch], loc="upper left", bbox_to_anchor=(0.2, -0.16))
+
     else:
+        # Standard rendering
         imgs = [
             ax.tripcolor(t, np.ravel(val), cmap=cmap, norm=norm, ec="white")
             for t, val in zip(triangul, plot_values)
         ]
 
-    # Value labels
+    # Add numeric labels to triangle centers
     if show_values:
         for t, val in zip(triangul, plot_values):
             add_value_labels(ax, t, val, fmt=value_fmt)
@@ -229,8 +253,8 @@ def plot_cube(
     cbar.set_label(colorbar_label)
 
     # Axis ticks
-    ax.set_xticks(range(plot_m))
-    ax.set_yticks(range(plot_n))
+    ax.set_xticks(range(plot_M))
+    ax.set_yticks(range(plot_N))
     ax.set_xlabel(xlabel, fontsize=18)
     ax.set_ylabel(ylabel, fontsize=18)
 
@@ -240,15 +264,24 @@ def plot_cube(
         for t, lbl in zip(triangul, quantile_labels):
             add_quantile_labels(ax, t, lbl)
     else:
+        # X labels increase left -> right
         x_tick_labels = [f"Q{i+1}" for i in range(M)]
+
+        # Y labels decrease top -> bottom
         y_tick_labels = [f"Q{N-i}" for i in range(N)]
         ax.set_xticklabels(x_tick_labels, fontsize=14)
         ax.set_yticklabels(y_tick_labels, fontsize=14)
 
     plt.title(title, fontsize=20)
+
+    # Highest quantile row at top
     ax.invert_yaxis()
+    
+    # Remove outer margins
     ax.margins(x=0, y=0)
     ax.set_aspect("equal", "box")
+
+    # Make square cells
     plt.tight_layout()
 
     if save:
