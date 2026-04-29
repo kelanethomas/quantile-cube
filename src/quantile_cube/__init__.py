@@ -42,4 +42,4 @@ __all__ = [
     "add_quantile_labels",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.1.3"

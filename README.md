@@ -2,7 +2,14 @@
 
 A Python package for visualizing the distribution of 3D movement data — velocity, acceleration, and angle — collapsed into a 2D heatmap.
 
-Movement observations are binned into quantiles along three dimensions: velocity (x-axis), acceleration (y-axis), and angle of movement (the four triangles within each cell). Each triangle's color represents the density of observations — the proportion of total time spent in that specific combination of velocity, acceleration, and angle quantile. This makes it possible to see at a glance where movement is concentrated across all three dimensions simultaneously.
+Movement observations are binned into quantiles along three dimensions: velocity (x-axis), acceleration (y-axis), and angle of movement (the four triangles within each cell). 
+
+Color intensity reflects the value associated with each bin, which may represent:
+- relative density (proportion of observations),
+- signed effect size (positive or negative values),
+- or normalized magnitude depending on the input data.
+
+This enables comparison of movement structure across velocity, acceleration, and angle dimensions under multiple statistical interpretations.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/kelanethomas/quantile-cube/main/docs/example.png" width="500" alt="Example quantile cube visualization"/>
@@ -61,7 +68,7 @@ plot_cube(
     N=5,
     title="My Quantile Cube",
     colorbar_label="Value",
-    cmap="viridis",
+    cmap="Blues",
 )
 ```
 
@@ -80,6 +87,8 @@ plot_cube(
 )
 ```
 
+Note: If your data contains both positive and negative values, a diverging colormap such as `"RdBu_r"` is recommended for correct visual interpretation.
+
 ## Parameters
 
 | Parameter | Type | Default | Description |
@@ -88,14 +97,15 @@ plot_cube(
 | `cube_data` | DataFrame | `None` | Single-row DataFrame with columns `Q{vel}_vel_Q{acc}_acc_Q{angle}_angle` |
 | `M` | int | `5` | Number of columns |
 | `N` | int | `5` | Number of rows |
-| `minimum` | float | `0` | Colormap lower bound |
+| `minimum` | float | data min rounded down to nearest 0.01  | Colormap lower bound |
 | `maximum` | float | data max rounded up to nearest 0.01 | Colormap upper bound |
-| `cmap` | str or Colormap | `"Reds"` | Matplotlib colormap |
+| `cmap` | str or Colormap | `"Reds"` (sequential data) / `"RdBu_r"` (diverging data with negative + positive values) | Matplotlib colormap |
 | `title` | str | `"Quantile Cube"` | Plot title and default save filename |
 | `colorbar_label` | str | `""` | Colorbar label |
+| `colorbar_ticks` | list[float] | Matplotlib default | Colorbar tick labels |
 | `xlabel` | str | `"Velocity"` | X-axis label |
 | `ylabel` | str | `"Acceleration"` | Y-axis label |
-| `quantile_labels` | list of 4 str | `["Q1","Q2","Q3","Q4"]` | Triangle labels |
+| `quantile_labels` | list of 4 str | `["Angle Q1","Angle Q2","Angle Q3","Angle Q4"]` | Triangle labels |
 | `show_quantile_labels` | bool | `False` | Show label-only summary view |
 | `show_values` | bool | `False` | Print numeric value at center of each triangle |
 | `value_fmt` | str | `".4f"` | Format string for numeric labels when `show_values=True` |
@@ -127,6 +137,16 @@ plot_cube(
 )
 ```
 
+### Custom colorbar ticks
+
+```python
+plot_cube(
+    values=[q1, q2, q3, q4],
+    colorbar_ticks=[-0.2, -0.1, 0, 0.1, 0.2],
+    colorbar_label="Effect Size"
+)
+```
+
 ### Handling non-significant values
 
 ```python
@@ -155,10 +175,13 @@ plot_cube(
 
 ## How It Works
 
-Each cell in the grid corresponds to a (velocity, acceleration) quantile bin. Within each cell, four triangles represent four angle quantiles — encoding directional movement. Color intensity reflects the proportion of total observations falling in that bin, making relative density immediately readable across all three movement dimensions at once.
+Each cell in the grid corresponds to a (velocity, acceleration) quantile bin. Within each cell, four triangles represent four angle quantiles, encoding directional movement.
 
-> **Tip:** Values across all triangles sum to 1.0, so the colormap reflects relative time spent rather than absolute counts.
+Color intensity reflects the value associated with each bin, typically representing relative density or normalized magnitude of observations within that velocity–acceleration–angle combination. This allows comparison of movement structure across all three dimensions simultaneously.
 
+When data includes both positive and negative values, a diverging colormap centered at 0 is used to distinguish directionality (e.g., above/below baseline behavior). Missing or non-significant values (NaNs) can optionally be rendered in grey to indicate suppressed or unreliable estimates.
+
+> **Tip:** In density-based mode, values across all triangles sum to 1.0, meaning the colormap reflects relative time spent. In signed or effect-size mode, values represent magnitude and direction rather than proportions.
 ---
 
 ## Contributing
@@ -200,7 +223,7 @@ To also cite the software package:
   title   = {quantile-cube: 3D Movement Distribution Visualization},
   year    = {2026},
   url     = {https://github.com/kelanethomas/quantile-cube},
-  version = {0.1.0},
+  version = {0.1.3},
 }
 ```
 

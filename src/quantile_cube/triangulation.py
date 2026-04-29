@@ -27,19 +27,18 @@ def reorder_in_chunks(lst, chunk_size: int = 5) -> list:
     list
         The reordered list.
     """
-    lst = list(lst)
-
     # List to hold the new order
     new_order = []
-
+    
     # Iterate over the list in reverse chunks of size `chunk_size`
     for i in range(len(lst), 0, -chunk_size):
         # Get the current chunk of size `chunk_size`
         chunk = lst[max(0, i - chunk_size):i]
-
+        
         # Prepend the chunk to the new order
         new_order.extend(chunk)
-    return new_order
+    
+    return new_order 
 
 
 def triangulation_for_triheatmap(M: int, N: int) -> list:

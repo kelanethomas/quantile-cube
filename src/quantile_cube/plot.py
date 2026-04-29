@@ -10,22 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-from .triangulation import triangulation_for_triheatmap
+from .triangulation import triangulation_for_triheatmap, reorder_in_chunks
 from .labels import add_value_labels, add_quantile_labels
-
-def reorder_in_chunks(lst, chunk_size=5):
-    # List to hold the new order
-    new_order = []
-    
-    # Iterate over the list in reverse chunks of size `chunk_size`
-    for i in range(len(lst), 0, -chunk_size):
-        # Get the current chunk of size `chunk_size`
-        chunk = lst[max(0, i - chunk_size):i]
-        
-        # Prepend the chunk to the new order
-        new_order.extend(chunk)
-    
-    return new_order 
 
 def plot_cube(
     # --- Data input: provide EITHER `values` OR `cube_data` ---
@@ -41,6 +27,7 @@ def plot_cube(
     # --- Labels and titles ---
     title: str = "Quantile Cube",
     colorbar_label: str = "",
+    colorbar_ticks: list[float] | None = None,
     xlabel: str = "Velocity",
     ylabel: str = "Acceleration",
     quantile_labels: list[str] | None = None,
@@ -87,24 +74,30 @@ def plot_cube(
     values : list of array-like, optional
         List of 4 arrays [Q1, Q2, Q3, Q4], each of length M * N.
     cube_data : pandas.DataFrame, optional
-        Single-row DataFrame with columns named ``<value_prefix>_Q1_*``, etc.
-    value_prefix : str, optional
-        Column prefix used when reading from ``cube_data``. Default is "angle".
+        Single-row DataFrame whose columns contain the substrings
+        ``"Q1_angle"``, ``"Q2_angle"``, ``"Q3_angle"``, and ``"Q4_angle"``.
+        Only the angle quantile suffix is used for filtering; the vel/acc
+        portions of the column name are not parsed. A typical column name
+        might look like ``Q1_vel_Q1_acc_Q1_angle``.
     M : int
         Number of columns (x-axis quantile bins). Default is 5.
     N : int
         Number of rows (y-axis quantile bins). Default is 5.
     minimum : float, optional
-        Minimum value for colormap normalization. Defaults to 0.
+        Minimum value for colormap normalization. Defaults to data minimum
+        rounded down to the nearest 0.01 (e.g. 0.087 -> 0.08)
     maximum : float, optional
         Maximum value for colormap normalization. Defaults to the data max
         rounded up to the nearest 0.01 (e.g. 0.087 → 0.09).
     cmap : str or matplotlib Colormap, optional
-        Colormap to use. Defaults to "viridis".
+        Colormap to use. Defaults to "Reds" for all positive or all negative data 
+        and "RdBu" for data with both positive and negative values with white at 0.
     title : str, optional
         Plot title and default save filename. Default is "Quantile Cube".
     colorbar_label : str, optional
         Label for the colorbar. Default is "".
+    colorbar_ticks: list[float] | None, optional
+        Ticks to be used for colorbar labeling. Default is Matplotlib labeling.
     xlabel : str, optional
         X-axis label. Default is "Velocity".
     ylabel : str, optional
@@ -145,12 +138,6 @@ def plot_cube(
         If neither ``values`` nor ``cube_data`` is provided, or if ``values``
         does not contain exactly 4 arrays.
     """
-    # Colormap Handling 
-    if cmap is None:
-        cmap = plt.get_cmap("Reds")
-    elif isinstance(cmap, str):
-        cmap = plt.get_cmap(cmap)
-
     # Default Labels for Angle Quantiles 
     if quantile_labels is None:
         quantile_labels = ["Angle Q1", "Angle Q2", "Angle Q3", "Angle Q4"]
@@ -195,18 +182,34 @@ def plot_cube(
         plot_M, plot_N = M, N
 
     # Color Normalization
-    if minimum is None:
-        minimum = 0.0
+    all_vals = np.concatenate([np.ravel(v) for v in plot_values])
+    all_vals = all_vals[~np.isnan(all_vals)]
 
-    if maximum is None:
+    data_min = np.min(all_vals)
+    data_max = np.max(all_vals)
 
-        # Use data max rounded upward to nearest hundredth
-        all_vals = np.concatenate(
-            [np.ravel(v) for v in plot_values]
-        )
+    # Colormap and normalization handling
+    if cmap is None:
+        if data_min < 0 and data_max > 0:
+            cmap = plt.get_cmap("RdBu_r")
+        else:
+            cmap = plt.get_cmap("Reds")
+    elif isinstance(cmap, str):
+        cmap = plt.get_cmap(cmap)
 
-        raw_max = np.nanmax(all_vals)
-        maximum = np.ceil(raw_max * 100) / 100
+    if minimum is None and maximum is None:
+        if data_min < 0 and data_max > 0:
+            abs_max = max(abs(data_min), abs(data_max))
+            abs_max = np.ceil(abs_max * 100) / 100
+            minimum, maximum = -abs_max, abs_max
+        else:
+            minimum = np.floor(data_min * 100) / 100
+            maximum = np.ceil(data_max * 100) / 100
+    else:
+        if minimum is None:
+            minimum = data_min
+        if maximum is None:
+            maximum = data_max
     
     norm = plt.Normalize(minimum, maximum)
 
@@ -251,6 +254,16 @@ def plot_cube(
     # Colorbar
     cbar = plt.colorbar(imgs[0], ax=ax)
     cbar.set_label(colorbar_label)
+
+    if colorbar_ticks is not None:
+        ticks = np.array(colorbar_ticks)
+
+        # Expand colorbar limits to match ticks exactly
+        vmin, vmax = np.min(ticks), np.max(ticks)
+        cbar.mappable.set_clim(vmin, vmax)
+
+        cbar.set_ticks(ticks)
+        cbar.set_ticklabels([f"{t:.2f}" for t in ticks])
 
     # Axis ticks
     ax.set_xticks(range(plot_M))
