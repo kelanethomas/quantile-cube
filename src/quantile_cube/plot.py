@@ -51,7 +51,7 @@ def plot_cube(
     ----------
     Provide data using **one** of the two options below:
 
-    Option 1 — raw arrays (recommended for general use):
+    Option 1 — raw arrays:
         Pass a list of exactly 4 array-like objects, one per quantile (Q1–Q4).
         Each array should have M * N values.
 
@@ -59,7 +59,7 @@ def plot_cube(
 
             plot_cube(values=[q1_arr, q2_arr, q3_arr, q4_arr], M=5, N=5)
 
-    Option 2 — DataFrame:
+    Option 2 — DataFrame (recommended for the intended velocity/acceleration/angle use case):
         Pass a single-row DataFrame whose columns are named:
         ``Q{vel}_vel_Q{acc}_acc_Q{angle}_angle``
 
@@ -92,8 +92,8 @@ def plot_cube(
         Maximum value for colormap normalization. Defaults to the data max
         rounded up to the nearest 0.01 (e.g. 0.087 → 0.09).
     cmap : str or matplotlib Colormap, optional
-        Colormap to use. Defaults to "Reds" for all positive or all negative data 
-        and "RdBu" for data with both positive and negative values with white at 0.
+        Colormap to use. Defaults to "Reds" for all positive or all negative data
+        and "RdBu_r" for data with both positive and negative values with white at 0.
     title : str, optional
         Plot title and default save filename. Default is "Quantile Cube".
     colorbar_label : str, optional
@@ -222,10 +222,14 @@ def plot_cube(
         if maximum is None:
             maximum = np.ceil(data_max * 100) / 100
     
+    if minimum == maximum:
+        minimum -= 0.01
+        maximum += 0.01
+
     norm = plt.Normalize(minimum, maximum)
 
     # Build triangulations for N/E/S/W triangles in each square
-    triangul = triangulation_for_triheatmap( plot_M, plot_N)
+    triangul = triangulation_for_triheatmap(plot_M, plot_N)
 
     fig, ax = plt.subplots(figsize=figsize)
 

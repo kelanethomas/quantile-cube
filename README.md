@@ -72,7 +72,7 @@ plot_cube(
 )
 ```
 
-### Option 2 — DataFrame (recommended)
+### Option 2 — DataFrame (recommended for velocity/acceleration/angle data)
 
 If your data is in a DataFrame with columns named like `Q1_vel_Q1_acc_Q1_angle`:
 
