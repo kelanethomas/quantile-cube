@@ -24,7 +24,7 @@ Using a DataFrame (legacy format)::
 
     from quantile_cube import plot_cube
 
-    plot_cube(cube_data=df, value_prefix="angle", M=5, N=5)
+    plot_cube(cube_data=df, M=5, N=5)
 
 Public API
 ----------

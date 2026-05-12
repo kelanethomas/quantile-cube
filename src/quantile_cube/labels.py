@@ -28,6 +28,8 @@ def add_value_labels(ax, triangulation, values, fmt: str = ".4f", fontsize: int 
     """
     # Loop over the triangles and add labels at the triangle centers
     for tri, val in zip(triangulation.triangles, np.ravel(values)):
+        if np.isnan(val):
+            continue
         # Calculate the center of each triangle
         x = triangulation.x[tri].mean()
         y = triangulation.y[tri].mean()

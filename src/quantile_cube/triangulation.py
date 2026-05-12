@@ -27,9 +27,15 @@ def reorder_in_chunks(lst, chunk_size: int = 5) -> list:
     list
         The reordered list.
     """
+    if len(lst) % chunk_size != 0:
+        raise ValueError(
+            f"Length of input ({len(lst)}) is not divisible by chunk_size ({chunk_size}). "
+            "Ensure the data array has exactly M * N elements."
+        )
+
     # List to hold the new order
     new_order = []
-    
+
     # Iterate over the list in reverse chunks of size `chunk_size`
     for i in range(len(lst), 0, -chunk_size):
         # Get the current chunk of size `chunk_size`

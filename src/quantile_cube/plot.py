@@ -6,6 +6,8 @@ Main plotting function for the quantile cube heatmap.
 
 from __future__ import annotations
 
+import copy
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -166,7 +168,10 @@ def plot_cube(
             "or cube_data=DataFrame."
         )
 
-    # Summary Mode: Show one cell with four labeled triangles
+    # Summary Mode: Show one cell with four labeled triangles.
+    # q1[-M] selects the first element of the last row (index M*(N-1)),
+    # which corresponds to the Q1-velocity / QN-acceleration cell — used
+    # solely for coloring the summary triangles; the exact cell is arbitrary.
     if show_quantile_labels:
         plot_values = [
             q1[-M],
@@ -185,17 +190,23 @@ def plot_cube(
     all_vals = np.concatenate([np.ravel(v) for v in plot_values])
     all_vals = all_vals[~np.isnan(all_vals)]
 
+    if all_vals.size == 0:
+        raise ValueError(
+            "All values are NaN — cannot determine colormap range. "
+            "Provide at least one finite value, or set minimum and maximum explicitly."
+        )
+
     data_min = np.min(all_vals)
     data_max = np.max(all_vals)
 
     # Colormap and normalization handling
     if cmap is None:
         if data_min < 0 and data_max > 0:
-            cmap = plt.get_cmap("RdBu_r")
+            cmap = plt.colormaps["RdBu_r"]
         else:
-            cmap = plt.get_cmap("Reds")
+            cmap = plt.colormaps["Reds"]
     elif isinstance(cmap, str):
-        cmap = plt.get_cmap(cmap)
+        cmap = plt.colormaps[cmap]
 
     if minimum is None and maximum is None:
         if data_min < 0 and data_max > 0:
@@ -207,9 +218,9 @@ def plot_cube(
             maximum = np.ceil(data_max * 100) / 100
     else:
         if minimum is None:
-            minimum = data_min
+            minimum = np.floor(data_min * 100) / 100
         if maximum is None:
-            maximum = data_max
+            maximum = np.ceil(data_max * 100) / 100
     
     norm = plt.Normalize(minimum, maximum)
 
@@ -219,7 +230,6 @@ def plot_cube(
     fig, ax = plt.subplots(figsize=figsize)
 
     if grey_nonsignificant:
-        import copy
         grey_cmap = copy.copy(cmap)
 
         # NaN values appear gray
